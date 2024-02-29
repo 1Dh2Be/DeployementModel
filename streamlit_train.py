@@ -12,6 +12,7 @@ def drop_outliers(data):
     # Drop the rows where 'primary_energy_consumption_sqm' is over 1000
     data = data[data['primary_energy_consumption_sqm'] <= 1000]
 
+
     # Drop the rows where there are more than 105 bedrooms
     data = data[data['nbr_bedrooms'] <= 50]
 
@@ -89,9 +90,30 @@ def train():
     data = clean_data(data)
 
     # Define features to use
-    num_features = ["total_area_sqm", "nbr_bedrooms"]
-    fl_features = ["fl_terrace"]
-    cat_features = ["property_type"]
+    num_features = ["total_area_sqm", 
+                    "nbr_bedrooms",  
+                    "primary_energy_consumption_sqm", 
+                    "terrace_sqm", 
+                    "latitude", #
+                    "longitude", #
+                    "surface_land_sqm", 
+                    "garden_sqm",
+                    ]
+    
+    fl_features = ["fl_terrace", 
+                   "fl_garden",
+                   #"fl_floodzone"#
+
+                   ]
+    
+    cat_features = ["property_type", 
+                    "province", 
+                    "subproperty_type", 
+                    "state_building",
+                    "zip_code",
+                    #"epc",
+                    #"heating_type",
+                    ]
 
     # Split the data into features and target
     X = data[num_features + fl_features + cat_features]
@@ -103,7 +125,7 @@ def train():
     )
     
     # Convert categorical columns with one-hot encoding using OneHotEncoder
-    enc = OneHotEncoder()
+    enc = OneHotEncoder(handle_unknown="ignore")
     enc.fit(X_train[cat_features])
     X_train_cat = enc.transform(X_train[cat_features]).toarray()
     X_test_cat = enc.transform(X_test[cat_features]).toarray()
@@ -124,12 +146,12 @@ def train():
         ],
         axis=1,
     )
-
     # Define the parameter grid
     param_grid = {
         'n_estimators': [650],
         'max_depth': [7],
-        'learning_rate': [0.075],
+        'learning_rate': [0.1],#[0.05],
+        'lambda': [0.5],
     }
 
     # Initialize the XGBoost regressor
@@ -155,17 +177,21 @@ def train():
     print(f"Train R² score: {train_score}", end="")
     print(f"Test R² score: {test_score}")
 
+    model.fit(pd.concat([X_train, X_test]), pd.concat([y_train, y_test]))
+    final_R2_SCORE = r2_score(pd.concat([y_train, y_test]), model.predict(pd.concat([X_train, X_test])))
+    print(f"final R² score: {final_R2_SCORE}", end="")
+
     artifacts = {
         "features": {
             "num_features": num_features,
             "fl_features": fl_features,
             "cat_features": cat_features,
         },
-        "clean_data": clean_data,
         "enc": enc,
         "model": model,
     }
     joblib.dump(artifacts, "models/artifacts1.joblib")
+
 
 if __name__ == "__main__":
     train()
