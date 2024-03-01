@@ -19,8 +19,14 @@ class InputData(BaseModel):
     primary_energy_consumption_sqm: int
     surface_land_sqm: int
     state_building: object
-    longitude: float
-    latitude: float
+    fl_double_glazing: int
+    fl_swimming_pool: int
+    construction_year: int
+    equipped_kitchen: object
+    nbr_frontages: int
+    fl_furnished: int
+    fl_open_fire: int
+    locality: object
 
 @app.get('/')
 def greet_people():

@@ -93,15 +93,19 @@ def train():
     num_features = ["total_area_sqm", 
                     "nbr_bedrooms",  
                     "primary_energy_consumption_sqm", 
-                    "terrace_sqm", 
-                    "latitude", #
-                    "longitude", #
+                    "terrace_sqm",
                     "surface_land_sqm", 
                     "garden_sqm",
+                    "construction_year",
+                    "nbr_frontages"
                     ]
     
     fl_features = ["fl_terrace", 
                    "fl_garden",
+                   "fl_swimming_pool",
+                   "fl_double_glazing",
+                   "fl_open_fire",
+                   "fl_furnished"
                    #"fl_floodzone"#
 
                    ]
@@ -111,8 +115,9 @@ def train():
                     "subproperty_type", 
                     "state_building",
                     "zip_code",
+                    "equipped_kitchen",
+                    "locality"
                     #"epc",
-                    #"heating_type",
                     ]
 
     # Split the data into features and target
