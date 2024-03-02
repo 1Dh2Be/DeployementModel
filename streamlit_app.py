@@ -1,8 +1,5 @@
 import streamlit as st
-from streamlit_train import clean_data
 import pandas as pd
-import json 
-import streamlit_shadcn_ui as ui
 import requests
 
 df = pd.read_csv("data/properties.csv")
@@ -49,6 +46,9 @@ property_type_mapping = {
     }
 }
 
+property_type_map = {"House": "HOUSE",
+                     "Apartment": "APARTEMENT"}
+
 
 mapping_simplified = {
     "Hyper Equipped": "HYPER_EQUIPPED",
@@ -87,7 +87,7 @@ def main():
 
      select_prop_type, blank3, blank4, blank5 = st.columns(4)
      with select_prop_type:
-          select_prop_type = st.radio(label="**Select Property Type**", options=["Apartment", "House"], horizontal=True, index=None)       
+          select_prop_type = st.radio(label="**Select Property Type**", options=property_type_map.keys(), horizontal=True, index=None)       
 
      with blank3:
           st.write("")
@@ -187,7 +187,7 @@ def main():
           "terrace_sqm": terrace_sqm,
           "fl_garden": garden,
           "garden_sqm": garden_sqm,
-          "property_type": select_prop_type,
+          "property_type": property_type_map[select_prop_type] if select_prop_type != None else None,
           "subproperty_type": select_subprop_type,
           "province": select_province,
           "zip_code": zip_code,
