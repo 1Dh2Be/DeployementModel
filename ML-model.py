@@ -12,19 +12,22 @@ def drop_outliers(data):
     # Drop the rows where 'primary_energy_consumption_sqm' is over 1000
     data = data[data['primary_energy_consumption_sqm'] <= 1000]
 
-
     # Drop the rows where there are more than 105 bedrooms
     data = data[data['nbr_bedrooms'] <= 50]
-
-    return data
-
-def clean_data(data):
-    """Clean the dataset"""
 
     # Delete the rows where there is no province
     data = data[data["province"] != "MISSING"]
 
-    # Impute missing values for total_area_sqm based on property_type and subproperty_type
+    return data
+
+def clean_data(data, imputer=None):
+    """Clean the dataset"""
+
+    
+    if imputer is None:
+        imputer = {}
+
+    # Group by property_type & subproperty_type and take the median before storing it
     mean_sqm_per_category = data.groupby(['property_type', 'subproperty_type'])['total_area_sqm'].median()
 
     # Fill missing values in 'total_area_sqm' based on median values per category
@@ -34,8 +37,12 @@ def clean_data(data):
                      else row['total_area_sqm'],
         axis=1
     )
+
+    # Save values in dictionary
+    imputer['total_area_sqm'] = mean_sqm_per_category
+
     
-    # Impute missing values for primary_energy_consumption_sqm based on property_type and province
+    # Group by property_type & province and take the median before storing it
     median_energy_consumption_sqm = data.groupby(['subproperty_type', 'province'])['primary_energy_consumption_sqm'].median()
 
     # Fill missing values in 'primary_energy_consumption_sqm' based on median values per category
@@ -46,14 +53,24 @@ def clean_data(data):
         axis=1
     )
 
-    median_sqm_terace = data.groupby(["subproperty_type", "province"])["terrace_sqm"].median()
+    # Save values in dictionary
+    imputer['primary_energy_consumption_sqm'] = median_energy_consumption_sqm
 
+
+    # Group by subproperty type & province and store it
+    median_sqm_terrace = data.groupby(["subproperty_type", "province"])["terrace_sqm"].median()
+
+    # Fill missing values in 'ter' based on median values per category
     data["terrace_sqm"] = data.apply(
-        lambda row: median_sqm_terace.loc[(row['subproperty_type'], row['province'])] 
+        lambda row: median_sqm_terrace.loc[(row['subproperty_type'], row['province'])] 
                      if pd.isna(row['terrace_sqm']) 
                      else row['terrace_sqm'],
         axis=1
     )
+
+    # Save values in dictionary
+    imputer["terrace_sqm"] = median_sqm_terrace
+
 
     median_sqm_garden = data.groupby(["subproperty_type", "province"])["garden_sqm"].mean()
 
@@ -64,19 +81,25 @@ def clean_data(data):
         axis=1
     )
 
-    for col in ["latitude", "longitude"]:
+    # Save values in dictionary
+    imputer["garden_sqm"] = median_sqm_garden
 
-        mean_construction_year = data.groupby(['province', 'locality'])[col].mean()
 
-        data[col] = data.apply(
-            lambda row: mean_construction_year.loc[(row['province'], row['locality'])] 
-                        if pd.isna(row[col]) 
-                        else row[col],
-            axis=1
-        )
+    # for col in ["latitude", "longitude"]:
 
-    
-    return data
+    #     mean_construction_year = data.groupby(['province', 'locality'])[col].mean()
+
+    #     data[col] = data.apply(
+    #         lambda row: mean_construction_year.loc[(row['province'], row['locality'])] 
+    #                     if pd.isna(row[col]) 
+    #                     else row[col],
+    #         axis=1
+    #     )
+        
+    #     # Save values in dictionary
+    #     imputer[col] = mean_construction_year
+
+    return data, imputer
 
 def train():
     """Trains a linear regression model on the full dataset and stores output."""
@@ -86,39 +109,19 @@ def train():
     # Drop outliers
     data = drop_outliers(data)
 
-    #  Clean the data
-    data = clean_data(data)
-
     # Define features to use
-    num_features = ["total_area_sqm", 
-                    "nbr_bedrooms",  
-                    "primary_energy_consumption_sqm", 
-                    "terrace_sqm",
-                    "surface_land_sqm", 
-                    "garden_sqm",
-                    "construction_year",
-                    "nbr_frontages"
-                    ]
+    num_features = ["total_area_sqm", "nbr_bedrooms",
+                    "primary_energy_consumption_sqm",
+                    "terrace_sqm","construction_year",
+                    "garden_sqm", "surface_land_sqm", 
+                    "nbr_frontages"]
     
-    fl_features = ["fl_terrace", 
-                   "fl_garden",
-                   "fl_swimming_pool",
-                   "fl_double_glazing",
-                   "fl_open_fire",
-                   "fl_furnished"
-                   #"fl_floodzone"#
+    fl_features = ["fl_terrace", "fl_garden", "fl_furnished", 
+                   "fl_swimming_pool", "fl_double_glazing",
+                   "fl_open_fire"]
 
-                   ]
-    
-    cat_features = ["property_type", 
-                    "province", 
-                    "subproperty_type", 
-                    "state_building",
-                    "zip_code",
-                    "equipped_kitchen",
-                    "locality"
-                    #"epc",
-                    ]
+    cat_features = ["subproperty_type", "province", "state_building",
+                    "property_type", "locality", "zip_code"]
 
     # Split the data into features and target
     X = data[num_features + fl_features + cat_features]
@@ -128,7 +131,14 @@ def train():
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.20, random_state=505
     )
-    
+
+    # Clean the training data
+    X_train, imputer = clean_data(X_train)
+
+    # Impute missing values in the testing data based on information from the training data
+    X_test, _ = clean_data(X_test, imputer)
+
+
     # Convert categorical columns with one-hot encoding using OneHotEncoder
     enc = OneHotEncoder(handle_unknown="ignore")
     enc.fit(X_train[cat_features])
@@ -151,12 +161,13 @@ def train():
         ],
         axis=1,
     )
+
     # Define the parameter grid
     param_grid = {
         'n_estimators': [650],
         'max_depth': [7],
-        'learning_rate': [0.1],#[0.05],
-        'lambda': [0.5],
+        'learning_rate': [0.1],
+        'lambda': [0.5]
     }
 
     # Initialize the XGBoost regressor
@@ -179,12 +190,13 @@ def train():
     # Evaluate the model
     train_score = r2_score(y_train, model.predict(X_train))
     test_score = r2_score(y_test, model.predict(X_test))
-    print(f"Train R² score: {train_score}", end="")
+    print(f"\nTrain R² score: {train_score}", end="")
     print(f"Test R² score: {test_score}")
 
+    # Add the 20% left of the dataset 
     model.fit(pd.concat([X_train, X_test]), pd.concat([y_train, y_test]))
-    final_R2_SCORE = r2_score(pd.concat([y_train, y_test]), model.predict(pd.concat([X_train, X_test])))
-    print(f"final R² score: {final_R2_SCORE}", end="")
+    final_R2_score = r2_score(pd.concat([y_train, y_test]), model.predict(pd.concat([X_train, X_test])))
+    print(f"final R² score: {final_R2_score}", end="")
 
     artifacts = {
         "features": {
@@ -195,8 +207,7 @@ def train():
         "enc": enc,
         "model": model,
     }
-    joblib.dump(artifacts, "models/artifacts1.joblib")
-
+    joblib.dump(artifacts, "src/artifacts.joblib")
 
 if __name__ == "__main__":
     train()
