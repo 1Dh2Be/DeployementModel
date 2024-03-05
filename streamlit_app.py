@@ -66,7 +66,7 @@ building_state_mapping = {
 }
 
 def make_api_request(user_input):
-    api_url = 'http://localhost:8000/request' 
+    api_url = 'https://deployementmodelv2.onrender.com/request' 
     data = user_input
     response = requests.post(api_url, json=data)
     if response.status_code == 200:
