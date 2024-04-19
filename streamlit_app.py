@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 
-df = pd.read_csv("data/properties.csv")
+df = pd.read_csv("src/data/properties.csv")
 
 property_type = df["property_type"].unique().tolist()
 province = df["province"].unique().tolist()
@@ -66,7 +66,8 @@ building_state_mapping = {
 }
 
 def make_api_request(user_input):
-    api_url = 'https://deployementmodelv2.onrender.com/request' 
+#     api_url = 'https://deployementmodelv2.onrender.com/request' 
+    api_url = 'http://127.0.0.1:8000/request' 
     data = user_input
     response = requests.post(api_url, json=data)
     if response.status_code == 200:
@@ -78,7 +79,7 @@ def main():
 
      st.markdown("""
      <div style="text-align:center">
-     <h1>Fivers price predict-model 🏡</h1>
+     <h1>Home Price Prediction Tool 🏡</h1>
      </div>
      """, unsafe_allow_html=True)
      st.text("")
@@ -100,6 +101,9 @@ def main():
           select_subprop_type = st.selectbox("**Subproperty Type**", options=property_type_mapping["HOUSE"], index=None, placeholder="Select House Subproperty...")
      else:
           select_subprop_type = st.selectbox("**Subproperty Type**", options=property_type_mapping["APARTMENT"], index=None, placeholder="Select Apartment Subproperty...")
+     
+     st.divider()
+
 
      select_province, zip_code, locality = st.columns(3)
      with zip_code:
@@ -117,7 +121,7 @@ def main():
           living_area = (st.text_input("**Living Area (m²)**"))
      with surface_land_sqm:
           if select_prop_type == "House":
-               surface_land_sqm = surface_land_sqm = st.text_input("Total Land Area (m²)")
+               surface_land_sqm = st.text_input("Total Land Area (m²)")
           else:
                surface_land_sqm = living_area
      

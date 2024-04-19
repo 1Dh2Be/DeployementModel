@@ -84,27 +84,12 @@ def clean_data(data, imputer=None):
     # Save values in dictionary
     imputer["garden_sqm"] = median_sqm_garden
 
-
-    # for col in ["latitude", "longitude"]:
-
-    #     mean_construction_year = data.groupby(['province', 'locality'])[col].mean()
-
-    #     data[col] = data.apply(
-    #         lambda row: mean_construction_year.loc[(row['province'], row['locality'])] 
-    #                     if pd.isna(row[col]) 
-    #                     else row[col],
-    #         axis=1
-    #     )
-        
-    #     # Save values in dictionary
-    #     imputer[col] = mean_construction_year
-
     return data, imputer
 
 def train():
     """Trains a linear regression model on the full dataset and stores output."""
     # Load the data
-    data = pd.read_csv("data/properties.csv")
+    data = pd.read_csv("src/data/properties.csv")
 
     # Drop outliers
     data = drop_outliers(data)
@@ -191,7 +176,7 @@ def train():
     train_score = r2_score(y_train, model.predict(X_train))
     test_score = r2_score(y_test, model.predict(X_test))
     print(f"\nTrain R² score: {train_score}", end="")
-    print(f"Test R² score: {test_score}")
+    print(f" Test R² score: {test_score}")
 
     # Add the 20% left of the dataset 
     model.fit(pd.concat([X_train, X_test]), pd.concat([y_train, y_test]))
@@ -211,3 +196,5 @@ def train():
 
 if __name__ == "__main__":
     train()
+
+    # directory = /Users/MimounB/Desktop/Projects/DeployementModel
